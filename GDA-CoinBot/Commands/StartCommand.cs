@@ -4,12 +4,12 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace GDA_CoinBot;
 
-public class StartMenuCommand : Command
+public class StartCommand : Command
 {
     private readonly TelegramBotClient _botClient;
 
 
-    public StartMenuCommand(TelegramBotClient botClient)
+    public StartCommand(TelegramBotClient botClient)
     {
         _botClient = botClient;
     }

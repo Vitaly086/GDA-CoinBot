@@ -1,5 +1,4 @@
-﻿using GDA_CoinBot;
-
+﻿
 class Program
 {
     static void Main(string[] args)

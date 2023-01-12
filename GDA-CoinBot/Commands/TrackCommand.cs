@@ -4,11 +4,11 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace GDA_CoinBot;
 
-public class TrackMenuCommand : Command
+public class TrackCommand : Command
 {
     private readonly TelegramBotClient _botClient;
 
-    public TrackMenuCommand(TelegramBotClient botClient)
+    public TrackCommand(TelegramBotClient botClient)
     {
         _botClient = botClient;
     }

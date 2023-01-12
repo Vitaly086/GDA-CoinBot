@@ -4,12 +4,12 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace GDA_CoinBot;
 
-public class ShowCurrencyMenuCommand : Command
+public class ShowCurrencyCommand : Command
 {
     private readonly TelegramBotClient _botClient;
 
 
-    public ShowCurrencyMenuCommand(TelegramBotClient botClient)
+    public ShowCurrencyCommand(TelegramBotClient botClient)
     {
         _botClient = botClient;
     }
@@ -18,7 +18,7 @@ public class ShowCurrencyMenuCommand : Command
     public override async Task ExecuteAsync(Message message, CancellationToken cancellationToken)
     {
         var chatId = message.Chat.Id;
-
+        
         var inlineKeyboard = new InlineKeyboardMarkup(new[]
         {
             // Row 1
