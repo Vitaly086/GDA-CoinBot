@@ -7,13 +7,11 @@ namespace GDA_CoinBot;
 public class StartCommand : Command
 {
     private readonly TelegramBotClient _botClient;
-
-
+    
     public StartCommand(TelegramBotClient botClient)
     {
         _botClient = botClient;
     }
-
 
     public override async Task ExecuteAsync(Message message, CancellationToken cancellationToken)
     {

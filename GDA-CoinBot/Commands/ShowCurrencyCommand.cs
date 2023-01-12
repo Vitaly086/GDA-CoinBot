@@ -7,14 +7,11 @@ namespace GDA_CoinBot;
 public class ShowCurrencyCommand : Command
 {
     private readonly TelegramBotClient _botClient;
-
-
     public ShowCurrencyCommand(TelegramBotClient botClient)
     {
         _botClient = botClient;
     }
-
-
+    
     public override async Task ExecuteAsync(Message message, CancellationToken cancellationToken)
     {
         var chatId = message.Chat.Id;
