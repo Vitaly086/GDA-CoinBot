@@ -6,6 +6,6 @@ public static class CustomCallbackData
     public const string ETH = "ETH";
     public const string BNB = "BNB";
     public const string DOGE = "DOGE";
-    public const string CHANGE_CURRENCY = "ChangeCurrency";
-    public const string RESULT = "Result";
+    public const string SELECT_CURRENCY = "SelectCurrency";
+    public const string CHANGE_CURRENCY = "ChageCurrency";
 }

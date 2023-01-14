@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using GDA_CoinBot;
+﻿using GDA_CoinBot;
 using Newtonsoft.Json;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
@@ -7,12 +6,13 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
-public class Bot
+public class CurrencyBot
 {
     private readonly TelegramBotClient _botClient;
+    private readonly List<string> _currencyCodes = new List<string>();
     private CancellationTokenSource _cancellationTokenSource;
 
-    public Bot(string apiKey)
+    public CurrencyBot(string apiKey)
     {
         _botClient = new TelegramBotClient(apiKey);
     }
@@ -34,8 +34,11 @@ public class Bot
         });
     }
 
+
     public void StartReceivingAsync()
     {
+        AddCurrencyCodes();
+        
         _cancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = _cancellationTokenSource.Token;
         var receiverOptions = new ReceiverOptions
@@ -50,72 +53,80 @@ public class Bot
             cancellationToken);
     }
 
+    private void AddCurrencyCodes()
+    {
+        _currencyCodes.Add(CustomCallbackData.BTC);
+        _currencyCodes.Add(CustomCallbackData.BNB);
+        _currencyCodes.Add(CustomCallbackData.ETH);
+        _currencyCodes.Add(CustomCallbackData.DOGE);
+    }
+
     private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update,
         CancellationToken cancellationToken)
     {
-        long? chatId;
-        InlineKeyboardMarkup? inlineKeyboard;
         switch (update.Type)
         {
             case UpdateType.Message:
-                chatId = update.Message?.Chat.Id;
-
-                await _botClient.DeleteMessageAsync(chatId: chatId,
-                    update.Message.MessageId,
-                    cancellationToken: cancellationToken);
-
-                if (update.Message?.Text == null)
-                {
-                    await _botClient.SendTextMessageAsync(chatId: chatId,
-                        text: "Бот принимает только команды из меню.",
-                        cancellationToken: cancellationToken);
-                    return;
-                }
-
-                var messageText = update.Message.Text;
-
-                if (IsStartCommand(messageText))
-                {
-                    await SendStartMessageAsync(botClient, cancellationToken, chatId);
-                    return;
-                }
-
-                if (IsPriceCommand(messageText))
-                {
-                    await ShowCurrencySelectionAsync(chatId, cancellationToken);
-                }
-
+                await HandleMessageAsync(botClient, update, cancellationToken);
                 break;
 
             case UpdateType.CallbackQuery:
-                chatId = update.CallbackQuery.Message.Chat.Id;
-                var updateData = update.CallbackQuery.Data;
+                await HandleCallbackQueryAsync(update, cancellationToken);
+                return;
+        }
+    }
 
-                switch (updateData)
-                {
-                    case CustomCallbackData.CHANGE_CURRENCY:
-                    {
-                        await _botClient.DeleteMessageAsync(chatId: chatId,
-                            messageId: update.CallbackQuery.Message.MessageId,
-                            cancellationToken: cancellationToken);
+    private async Task HandleMessageAsync(ITelegramBotClient botClient, Update update,
+        CancellationToken cancellationToken)
+    {
+        var chatId = update.Message.Chat.Id;
 
-                        await ShowCurrencySelectionAsync(chatId, cancellationToken);
-                        break;
-                    }
+        await DeleteMessage(update, cancellationToken);
+        if (update.Message.Text == null)
+        {
+            await _botClient.SendTextMessageAsync(chatId: chatId,
+                text: "Бот принимает только команды из меню.",
+                cancellationToken: cancellationToken);
+            return;
+        }
 
-                    case CustomCallbackData.RESULT:
-                    {
-                        await ShowCurrencySelectionAsync(chatId, cancellationToken);
-                        break;
-                    }
+        var messageText = update.Message.Text;
 
-                    default:
-                    {
-                        await SendCurrencyPriceAsync(update, cancellationToken, chatId);
-                        break;
-                    }
-                }
-                break;
+        if (IsStartCommand(messageText))
+        {
+            await SendStartMessageAsync(botClient, cancellationToken, chatId);
+            return;
+        }
+
+        if (IsPriceCommand(messageText))
+        {
+            await ShowCurrencySelectionAsync(chatId, cancellationToken);
+        }
+    }
+
+
+    private async Task HandleCallbackQueryAsync(Update update, CancellationToken cancellationToken)
+    {
+        var chatId = update.CallbackQuery.Message.Chat.Id;
+        var callbackData = update.CallbackQuery.Data;
+
+        if (callbackData == CustomCallbackData.SELECT_CURRENCY)
+        {
+            await DeleteMessage(update, cancellationToken);
+            await ShowCurrencySelectionAsync(chatId, cancellationToken);
+            return;
+        }
+
+        if (callbackData == CustomCallbackData.CHANGE_CURRENCY)
+        {
+            await ShowCurrencySelectionAsync(chatId, cancellationToken);
+            return;
+        }
+
+        if (_currencyCodes.Contains(callbackData))
+        {
+            await DeleteMessage(update, cancellationToken);
+            await SendCurrencyPriceAsync(update, cancellationToken, chatId);
         }
     }
 
@@ -155,7 +166,7 @@ public class Bot
         });
 
         await _botClient.SendTextMessageAsync(chatId: chatId,
-            text: "Выберите валютую",
+            text: "Выберите валюту:",
             replyMarkup: inlineKeyboard,
             cancellationToken: cancellationToken);
     }
@@ -167,7 +178,7 @@ public class Bot
         {
             new[]
             {
-                InlineKeyboardButton.WithCallbackData("Выбрать валюту.", CustomCallbackData.CHANGE_CURRENCY)
+                InlineKeyboardButton.WithCallbackData("Выбрать валюту.", CustomCallbackData.SELECT_CURRENCY)
             }
         });
 
@@ -179,23 +190,17 @@ public class Bot
             cancellationToken: cancellationToken);
     }
 
-    private async Task SendCurrencyPriceAsync(Update update, CancellationToken cancellationToken,
-        [DisallowNull] long? chatId)
+    private async Task SendCurrencyPriceAsync(Update update, CancellationToken cancellationToken, long? chatId)
     {
-        InlineKeyboardMarkup inlineKeyboard;
-        await _botClient.DeleteMessageAsync(chatId: chatId,
-            messageId: update.CallbackQuery.Message.MessageId,
-            cancellationToken: cancellationToken);
-
         var currencyCode = update.CallbackQuery.Data;
         var price = await CoinMarket.GetPriceAsync(currencyCode);
 
-        inlineKeyboard = new InlineKeyboardMarkup(new[]
+        var inlineKeyboard = new InlineKeyboardMarkup(new[]
         {
             new[]
             {
                 InlineKeyboardButton.WithCallbackData("Выбрать другую валюту.",
-                    CustomCallbackData.RESULT)
+                    CustomCallbackData.CHANGE_CURRENCY)
             }
         });
 
@@ -203,5 +208,30 @@ public class Bot
             text: $"Валюта: {currencyCode}, стоимость: {Math.Round(price, 3)}$",
             replyMarkup: inlineKeyboard,
             cancellationToken: cancellationToken);
+    }
+
+    private async Task DeleteMessage(Update update, CancellationToken cancellationToken)
+    {
+        try
+        {
+            switch (update.Type)
+            {
+                case UpdateType.Message:
+                    await _botClient.DeleteMessageAsync(chatId: update.Message.Chat.Id,
+                        update.Message.MessageId,
+                        cancellationToken: cancellationToken);
+                    return;
+                
+                case UpdateType.CallbackQuery:
+                    await _botClient.DeleteMessageAsync(chatId: update.CallbackQuery.Message.Chat.Id,
+                        update.CallbackQuery.Message.MessageId,
+                        cancellationToken: cancellationToken);
+                    return;
+            }
+        }
+        catch (Exception exception)
+        {
+            Console.WriteLine("User deleted message");
+        }
     }
 }
