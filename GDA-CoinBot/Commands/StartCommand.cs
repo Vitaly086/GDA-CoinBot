@@ -6,30 +6,15 @@ namespace GDA_CoinBot;
 
 public class StartCommand : Command
 {
-    private readonly TelegramBotClient _botClient;
+    private readonly CurrencyBot _currencyBot;
     
-    public StartCommand(TelegramBotClient botClient)
+    public StartCommand(CurrencyBot currencyBot)
     {
-        _botClient = botClient;
+        _currencyBot = currencyBot;
     }
 
-    public override async Task ExecuteAsync(Message message, CancellationToken cancellationToken)
+    public override async Task HandleCommandAsync(Message message, CancellationToken cancellationToken)
     {
-        var chatId = message.Chat.Id;
-        await _botClient.DeleteMessageAsync(chatId, message.MessageId, cancellationToken: cancellationToken);
-
-        var inlineKeyboard = new InlineKeyboardMarkup(new[]
-        {
-            new[]
-            {
-                InlineKeyboardButton.WithCallbackData("Выбрать валюту.", CustomCallbackData.START_CHOICE)
-            }
-        });
-
-        await _botClient.SendTextMessageAsync(
-            chatId: chatId,
-            text: "Привет!\n" +
-                  "Данный бот показывает текущий курс выбранной валюты.\n",
-            replyMarkup: inlineKeyboard, cancellationToken: cancellationToken);
+        await _currencyBot.ShowCurrency(message, cancellationToken);
     }
 }

@@ -11,5 +11,4 @@ public static class CustomCallbackData
     public const string START_CHOICE = "StartChoice";
     public const string CHANGE_CURRENCY = "ChangeCurrency";
     public const string CANCEL_TRACK = "CancelTrack";
-
 }

@@ -13,7 +13,7 @@ public class TrackCommand : Command
         _botClient = botClient;
     }
 
-    public override async Task ExecuteAsync(Message message, CancellationToken cancellationToken)
+    public override async Task HandleCommandAsync(Message message, CancellationToken cancellationToken)
     {
         var chatId = message.Chat.Id;
         var inlineKeyboard = new InlineKeyboardMarkup(new[]
