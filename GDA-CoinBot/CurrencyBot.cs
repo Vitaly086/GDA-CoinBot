@@ -1,6 +1,7 @@
 ﻿using GDA_CoinBot;
 using Newtonsoft.Json;
 using Telegram.Bot;
+using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -229,9 +230,12 @@ public class CurrencyBot
                     return;
             }
         }
-        catch (Exception exception)
+        catch (ApiRequestException exception)
         {
-            Console.WriteLine("User deleted message");
+            if (exception.ErrorCode == 400)
+            {
+                Console.WriteLine("User deleted message");
+            }
         }
     }
 }
