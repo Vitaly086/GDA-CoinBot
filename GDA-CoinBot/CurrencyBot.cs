@@ -112,6 +112,34 @@ public class CurrencyBot
         return _usersTokenSources[chatId];
     }
 
+    public async Task DeleteMessage(Update update, CancellationToken cancellationToken)
+    {
+        try
+        {
+            switch (update.Type)
+            {
+                case UpdateType.Message:
+                    await _telegramBotClient.DeleteMessageAsync(chatId: update.Message.Chat.Id,
+                        update.Message.MessageId,
+                        cancellationToken: cancellationToken);
+                    return;
+
+                case UpdateType.CallbackQuery:
+                    await _telegramBotClient.DeleteMessageAsync(chatId: update.CallbackQuery.Message.Chat.Id,
+                        update.CallbackQuery.Message.MessageId,
+                        cancellationToken: cancellationToken);
+                    return;
+            }
+        }
+        catch (ApiRequestException exception)
+        {
+            if (exception.ErrorCode == 400)
+            {
+                Console.WriteLine("User deleted message");
+            }
+        }
+    }
+
     private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update,
         CancellationToken cancellationToken)
     {
@@ -151,26 +179,7 @@ public class CurrencyBot
         {
             if (_usersCurrentCurrency.ContainsKey(chatId))
             {
-                var trackValue = Convert.ToDecimal(text);
-
-                var cancellationTokenSource = new CancellationTokenSource();
-
-                AddUsersTokenSources(chatId, cancellationTokenSource);
-                StartTrackingPrice(message, trackValue);
-
-                var inlineKeyboard = new InlineKeyboardMarkup(new[]
-                {
-                    new[]
-                    {
-                        InlineKeyboardButton.WithCallbackData("Остановить отслеживание",
-                            $"{CustomCallbackData.CANCEL_TRACK}"),
-                    }
-                });
-
-                await _telegramBotClient.SendTextMessageAsync(chatId,
-                    $"Начато отслеживание {_usersCurrentCurrency[chatId]} с порогом {trackValue}",
-                    replyMarkup: inlineKeyboard,
-                    cancellationToken: cancellationToken);
+                await StartTrackPrice(chatId, text, cancellationToken);
             }
         }
         catch (FormatException exception)
@@ -181,28 +190,49 @@ public class CurrencyBot
         }
     }
 
+    private async Task StartTrackPrice(long chatId, string text, CancellationToken cancellationToken)
+    {
+        var trackValue = Convert.ToDecimal(text);
+        var cancellationTokenSource = new CancellationTokenSource();
+
+        AddUsersTokenSources(chatId, cancellationTokenSource);
+        TrackPrice(chatId, trackValue);
+
+        var inlineKeyboard = new InlineKeyboardMarkup(new[]
+        {
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData("Остановить отслеживание",
+                    $"{CustomCallbackData.CANCEL_TRACK}"),
+            }
+        });
+
+        await _telegramBotClient.SendTextMessageAsync(chatId,
+            $"Начато отслеживание {_usersCurrentCurrency[chatId]} с порогом {trackValue}",
+            replyMarkup: inlineKeyboard,
+            cancellationToken: cancellationToken);
+    }
+
     private void AddUsersTokenSources(long chatId, CancellationTokenSource cancellationTokenSource)
     {
         if (!_usersTokenSources.ContainsKey(chatId))
         {
             _usersTokenSources.Add(chatId, cancellationTokenSource);
+            return;
         }
-        else
-        {
-            _usersTokenSources[chatId] = cancellationTokenSource;
-        }
+
+        _usersTokenSources[chatId] = cancellationTokenSource;
     }
 
-    private void StartTrackingPrice(Message message, decimal trackValue)
+    private void TrackPrice(long chatId, decimal trackValue)
     {
-        var isDesiredPriceHigher = trackValue > _callbackHandler.GetPreviousPrice(message.Chat.Id);
-        var cancellationToken = _usersTokenSources[message.Chat.Id].Token;
+        var isDesiredPriceHigher = trackValue > _callbackHandler.GetPreviousPrice(chatId);
+        var cancellationToken = _usersTokenSources[chatId].Token;
 
         var timer = new Timer(_ =>
         {
             Task.Run(async () =>
             {
-                var chatId = message.Chat.Id;
                 var currencyCode = _usersCurrentCurrency[chatId];
 
                 if (!cancellationToken.IsCancellationRequested)
@@ -236,33 +266,5 @@ public class CurrencyBot
         var jsonException = JsonConvert.SerializeObject(exception);
         Console.WriteLine(jsonException);
         return Task.CompletedTask;
-    }
-
-    public async Task DeleteMessage(Update update, CancellationToken cancellationToken)
-    {
-        try
-        {
-            switch (update.Type)
-            {
-                case UpdateType.Message:
-                    await _telegramBotClient.DeleteMessageAsync(chatId: update.Message.Chat.Id,
-                        update.Message.MessageId,
-                        cancellationToken: cancellationToken);
-                    return;
-
-                case UpdateType.CallbackQuery:
-                    await _telegramBotClient.DeleteMessageAsync(chatId: update.CallbackQuery.Message.Chat.Id,
-                        update.CallbackQuery.Message.MessageId,
-                        cancellationToken: cancellationToken);
-                    return;
-            }
-        }
-        catch (ApiRequestException exception)
-        {
-            if (exception.ErrorCode == 400)
-            {
-                Console.WriteLine("User deleted message");
-            }
-        }
     }
 }
