@@ -1,6 +1,7 @@
 ﻿using GDA_CoinBot;
 using Newtonsoft.Json;
 using Telegram.Bot;
+using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -53,7 +54,7 @@ public class CurrencyBot
     {
         _cancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = _cancellationTokenSource.Token;
-        _callbackHandler = new CallbackHandler(_telegramBotClient, this, _cancellationTokenSource, _usersTokenSources);
+        _callbackHandler = new CallbackHandler(_telegramBotClient, this);
 
         var receiverOptions = new ReceiverOptions
         {
@@ -104,6 +105,11 @@ public class CurrencyBot
         }
 
         _usersCurrentCurrency[chatId] = currencyCode;
+    }
+
+    public CancellationTokenSource GetTokenSource(long chatId)
+    {
+        return _usersTokenSources[chatId];
     }
 
     private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update,
@@ -167,7 +173,7 @@ public class CurrencyBot
                     cancellationToken: cancellationToken);
             }
         }
-        catch (Exception exception)
+        catch (FormatException exception)
         {
             await _telegramBotClient.SendTextMessageAsync(chatId, "Введите число.",
                 cancellationToken: cancellationToken);
@@ -251,9 +257,12 @@ public class CurrencyBot
                     return;
             }
         }
-        catch (Exception exception)
+        catch (ApiRequestException exception)
         {
-            Console.WriteLine("User deleted message");
+            if (exception.ErrorCode == 400)
+            {
+                Console.WriteLine("User deleted message");
+            }
         }
     }
 }

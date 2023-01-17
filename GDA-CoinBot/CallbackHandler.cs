@@ -9,17 +9,11 @@ public class CallbackHandler
     private readonly Dictionary<long, decimal> _previousCoinPrice = new Dictionary<long, decimal>();
     private readonly ITelegramBotClient _telegramBotClient;
     private readonly CurrencyBot _currencyBot;
-    private readonly CancellationTokenSource _cancellationTokenSource;
-    private readonly Dictionary<long, CancellationTokenSource> _usersTokenSources;
 
-    public CallbackHandler(ITelegramBotClient telegramBotClient, CurrencyBot currencyBot,
-        CancellationTokenSource cancellationTokenSource,
-        Dictionary<long, CancellationTokenSource> usersTokenSources)
+    public CallbackHandler(ITelegramBotClient telegramBotClient, CurrencyBot currencyBot)
     {
         _telegramBotClient = telegramBotClient;
         _currencyBot = currencyBot;
-        _cancellationTokenSource = cancellationTokenSource;
-        _usersTokenSources = usersTokenSources;
     }
 
     public async Task HandleCallbackQueryAsync(Update update, CancellationToken cancellationToken)
@@ -110,9 +104,9 @@ public class CallbackHandler
     {
         try
         {
-            _usersTokenSources[update.CallbackQuery.Message.Chat.Id].Cancel();
-            await _telegramBotClient.SendTextMessageAsync(update.CallbackQuery.Message.Chat.Id,
-                "Отслеживание остановлено.");
+            var chatId = update.CallbackQuery.Message.Chat.Id;
+            _currencyBot.GetTokenSource(chatId).Cancel();
+            await _telegramBotClient.SendTextMessageAsync(chatId, "Отслеживание остановлено.");
         }
         catch (Exception e)
         {
