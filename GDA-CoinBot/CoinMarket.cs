@@ -4,8 +4,6 @@ using CoinMarketCap;
 public static class CoinMarket
 {
     private static readonly string API_KEY = ApiConstants.COIN_MARKET_API;
-    private static readonly CoinMarketCapClient _client = new CoinMarketCapClient(API_KEY);
-
 
     public static async Task<decimal> GetPriceAsync(string currencyCode)
     {

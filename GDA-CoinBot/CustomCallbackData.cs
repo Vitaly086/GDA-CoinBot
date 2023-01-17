@@ -7,5 +7,5 @@ public static class CustomCallbackData
     public const string BNB = "BNB";
     public const string DOGE = "DOGE";
     public const string SELECT_CURRENCY = "SelectCurrency";
-    public const string CHANGE_CURRENCY = "ChageCurrency";
+    public const string CHANGE_CURRENCY = "ChangeCurrency";
 }

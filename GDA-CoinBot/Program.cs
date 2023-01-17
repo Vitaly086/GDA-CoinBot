@@ -4,7 +4,7 @@
     {
         var currencyBot = new CurrencyBot(ApiConstants.BOT_API);
         currencyBot.CreateCommands();
-        currencyBot.StartReceivingAsync();
+        currencyBot.StartReceiving();
         Console.ReadKey();
     }
 }

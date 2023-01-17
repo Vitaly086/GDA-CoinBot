@@ -1,5 +1,4 @@
 ﻿using GDA_CoinBot;
-using Newtonsoft.Json;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
@@ -11,7 +10,6 @@ public class CurrencyBot
 {
     private readonly TelegramBotClient _botClient;
     private readonly List<string> _currencyCodes = new List<string>();
-    private CancellationTokenSource _cancellationTokenSource;
 
     public CurrencyBot(string apiKey)
     {
@@ -29,22 +27,25 @@ public class CurrencyBot
             },
             new()
             {
-                Command = CustomBotCommands.PRICE,
+                Command = CustomBotCommands.SHOW_CURRENCIES,
                 Description = "Вывод сообщения с выбором 1 из 4 валют, для получения ее цены в данный момент"
             }
         });
     }
 
 
-    public void StartReceivingAsync()
+    public void StartReceiving()
     {
         AddCurrencyCodes();
-        
-        _cancellationTokenSource = new CancellationTokenSource();
-        var cancellationToken = _cancellationTokenSource.Token;
+
+        var cancellationTokenSource = new CancellationTokenSource();
+        var cancellationToken = cancellationTokenSource.Token;
         var receiverOptions = new ReceiverOptions
         {
-            AllowedUpdates = new UpdateType[] { UpdateType.Message, UpdateType.CallbackQuery }
+            AllowedUpdates = new UpdateType[]
+            {
+                UpdateType.Message, UpdateType.CallbackQuery
+            }
         };
 
         _botClient.StartReceiving(
@@ -68,21 +69,21 @@ public class CurrencyBot
         switch (update.Type)
         {
             case UpdateType.Message:
-                await HandleMessageAsync(botClient, update, cancellationToken);
+                await HandleMessageAsync(update, cancellationToken);
                 break;
 
             case UpdateType.CallbackQuery:
                 await HandleCallbackQueryAsync(update, cancellationToken);
-                return;
+                break;
         }
     }
 
-    private async Task HandleMessageAsync(ITelegramBotClient botClient, Update update,
+    private async Task HandleMessageAsync(Update update,
         CancellationToken cancellationToken)
     {
         var chatId = update.Message.Chat.Id;
 
-        await DeleteMessage(update, cancellationToken);
+        await DeleteMessage(chatId, update.Message.MessageId, cancellationToken);
         if (update.Message.Text == null)
         {
             await _botClient.SendTextMessageAsync(chatId: chatId,
@@ -95,11 +96,11 @@ public class CurrencyBot
 
         if (IsStartCommand(messageText))
         {
-            await SendStartMessageAsync(botClient, cancellationToken, chatId);
+            await SendStartMessageAsync(chatId, cancellationToken);
             return;
         }
 
-        if (IsPriceCommand(messageText))
+        if (IsShowCommand(messageText))
         {
             await ShowCurrencySelectionAsync(chatId, cancellationToken);
         }
@@ -110,42 +111,42 @@ public class CurrencyBot
     {
         var chatId = update.CallbackQuery.Message.Chat.Id;
         var callbackData = update.CallbackQuery.Data;
+        var messageId = update.CallbackQuery.Message.MessageId;
 
         if (callbackData == CustomCallbackData.SELECT_CURRENCY)
         {
-            await DeleteMessage(update, cancellationToken);
-            await ShowCurrencySelectionAsync(chatId, cancellationToken);
-            return;
-        }
-
-        if (callbackData == CustomCallbackData.CHANGE_CURRENCY)
-        {
+            await DeleteMessage(chatId, messageId, cancellationToken);
             await ShowCurrencySelectionAsync(chatId, cancellationToken);
             return;
         }
 
         if (_currencyCodes.Contains(callbackData))
         {
-            await DeleteMessage(update, cancellationToken);
-            await SendCurrencyPriceAsync(update, cancellationToken, chatId);
+            await DeleteMessage(chatId, messageId, cancellationToken);
+            await SendCurrencyPriceAsync(chatId, callbackData, cancellationToken);
+            return;
+        }
+
+        if (callbackData == CustomCallbackData.CHANGE_CURRENCY)
+        {
+            await ShowCurrencySelectionAsync(chatId, cancellationToken);
         }
     }
 
     private Task HandleError(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
     {
-        var jsonException = JsonConvert.SerializeObject(exception);
-        Console.WriteLine(jsonException);
+        Console.WriteLine(exception);
         return Task.CompletedTask;
     }
 
-    private bool IsStartCommand(string? messageText)
+    private bool IsStartCommand(string messageText)
     {
         return messageText.ToLower() == CustomBotCommands.START;
     }
 
-    private bool IsPriceCommand(string? messageText)
+    private bool IsShowCommand(string messageText)
     {
-        return messageText.ToLower() == CustomBotCommands.PRICE;
+        return messageText.ToLower() == CustomBotCommands.SHOW_CURRENCIES;
     }
 
     private async Task ShowCurrencySelectionAsync(long? chatId, CancellationToken cancellationToken)
@@ -172,8 +173,7 @@ public class CurrencyBot
             cancellationToken: cancellationToken);
     }
 
-    private static async Task SendStartMessageAsync(ITelegramBotClient botClient, CancellationToken cancellationToken,
-        long? chatId)
+    private async Task SendStartMessageAsync(long? chatId, CancellationToken cancellationToken)
     {
         var inlineKeyboard = new InlineKeyboardMarkup(new[]
         {
@@ -183,7 +183,7 @@ public class CurrencyBot
             }
         });
 
-        await botClient.SendTextMessageAsync(
+        await _botClient.SendTextMessageAsync(
             chatId: chatId,
             text: "Привет!\n" +
                   "Данный бот показывает текущий курс выбранной валюты.\n",
@@ -191,9 +191,8 @@ public class CurrencyBot
             cancellationToken: cancellationToken);
     }
 
-    private async Task SendCurrencyPriceAsync(Update update, CancellationToken cancellationToken, long? chatId)
+    private async Task SendCurrencyPriceAsync(long? chatId, string currencyCode, CancellationToken cancellationToken)
     {
-        var currencyCode = update.CallbackQuery.Data;
         var price = await CoinMarket.GetPriceAsync(currencyCode);
 
         var inlineKeyboard = new InlineKeyboardMarkup(new[]
@@ -211,24 +210,12 @@ public class CurrencyBot
             cancellationToken: cancellationToken);
     }
 
-    private async Task DeleteMessage(Update update, CancellationToken cancellationToken)
+    private async Task DeleteMessage(long chatId, int messageId, CancellationToken cancellationToken)
     {
         try
         {
-            switch (update.Type)
-            {
-                case UpdateType.Message:
-                    await _botClient.DeleteMessageAsync(chatId: update.Message.Chat.Id,
-                        update.Message.MessageId,
-                        cancellationToken: cancellationToken);
-                    return;
-                
-                case UpdateType.CallbackQuery:
-                    await _botClient.DeleteMessageAsync(chatId: update.CallbackQuery.Message.Chat.Id,
-                        update.CallbackQuery.Message.MessageId,
-                        cancellationToken: cancellationToken);
-                    return;
-            }
+            await _botClient.DeleteMessageAsync(chatId: chatId,
+                messageId, cancellationToken: cancellationToken);
         }
         catch (ApiRequestException exception)
         {
