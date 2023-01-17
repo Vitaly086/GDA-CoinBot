@@ -13,12 +13,12 @@ public static class CustomCallbackData
     
     // Коллбэк нажатия на инлайн кнопку в ответ на стартовое сообщение
     public const string START_CHOICE = "StartChoice";
-    // Коллбэк выбора кода вылюты
+    // Коллбэк нажатия на инлайн кнопку для выбора кода вылюты
     public const string SELECT_CURRENCY = "SelectCurrency";
-    // Коллбэк вызова команды для смены валюты
+    // Коллбэк нажатия на инлайн кнопку для вызова команды для смены валюты
     public const string CHANGE_CURRENCY = "ChangeCurrency";
-    // Коллбэк начала отслеживания валюты
+    // Коллбэк нажатия на инлайн кнопку для начала отслеживания валюты
     public const string START_TRACK = "StartTrack";
-    // Коллбэк отмены отслеживания валюты
+    // Коллбэк нажатия на инлайн кнопку для отмены отслеживания валюты
     public const string CANCEL_TRACK = "CancelTrack";
 }

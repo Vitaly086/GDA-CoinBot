@@ -10,15 +10,18 @@ namespace GDA_CoinBot;
 public class StartCommand : Command
 {
     private readonly ITelegramBotClient _botClient;
-    
+
     public StartCommand(ITelegramBotClient botClient)
     {
         _botClient = botClient;
     }
 
     /// <summary>
-    /// Переопределенный метод отправляет пользователю стартовое сообщение
+    /// Метод отправляет пользователю стартовое сообщение
+    /// С инлайн кнопкой и коллбэком стартового выбора
     /// </summary>
+    /// <param name="message"> Сообщение полученное от пользователя </param>
+    /// <param name="cancellationToken"> Токен отмены</param>
     public override async Task HandleCommandAsync(Message message, CancellationToken cancellationToken)
     {
         var chatId = message.Chat.Id;
@@ -33,10 +36,7 @@ public class StartCommand : Command
 
         // Отправляем сообщение с инлайн кнопкой
         await _botClient.SendTextMessageAsync(
-            chatId: chatId,
-            text: "Привет!\n" +
-                  "Данный бот показывает текущий курс выбранной валюты.\n",
-            replyMarkup: inlineKeyboard,
-            cancellationToken: cancellationToken);
+            chatId, text: "Привет!\n" + "Данный бот показывает текущий курс выбранной валюты.\n",
+            replyMarkup: inlineKeyboard, cancellationToken: cancellationToken);
     }
 }

@@ -5,7 +5,7 @@ using Telegram.Bot.Types.ReplyMarkups;
 namespace GDA_CoinBot;
 
 /// <summary>
-/// Класс команды отслеживать
+/// Класс команды, которая обрабатывает коллбэк отслеживание изменения цены валюты
 /// </summary>
 public class TrackCommand : Command
 {
@@ -15,9 +15,14 @@ public class TrackCommand : Command
     {
         _botClient = botClient;
     }
-
-    // Переопределенный метод отправляет пользователю сообщение с выбором валюты и инлайн кнопка
-    // С коллбэком действия Track и код валюты
+    
+    /// <summary>
+    /// Метод отправляет пользователю сообщение с выбором валюты 
+    /// И инлайн кнопками с коллбэком действия Track и кодом валюты
+    /// Например действие Track | код валюты BTC
+    /// </summary>
+    /// <param name="message"> Сообщение полученное от пользователя </param>
+    /// <param name="cancellationToken"> Токен отмены</param>
     public override async Task HandleCommandAsync(Message message, CancellationToken cancellationToken)
     {
         var chatId = message.Chat.Id;

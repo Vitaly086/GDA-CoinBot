@@ -7,23 +7,22 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
+/// <summary>
+/// Класс отвечает за работу бота получения цены волюты.
+/// Имеет объект класса TelegramBotClient для работы с TelegramApi
+/// Константу интеравала обновления курса валюты
+/// Словарь для хранения кода валюты выбранной для отслеживания пользователем
+/// Словарь для хранения команд бота
+/// Словарь для хранения токенов для отмены отслеживания валюты
+/// Объект класса для обработки обратных вызовов
+/// </summary>
 public class CurrencyBot
 {
-    // константа с интвервалом обновления курса
     private const int INTERVAL = 20000;
-
     private readonly TelegramBotClient _telegramBotClient;
-
-    // словарь для выбранной текущей валюты пользователя
-    private readonly Dictionary<long, string> _usersCurrentCurrency = new();
-
-    // словарь для хранения команд бота
+    private readonly Dictionary<long, string> _usersTrackCurrency = new();
     private readonly Dictionary<string, ICommand> _commandsMap = new();
-
-    // словарь для хранения токенов для отмены отслеживания валюты
     private readonly Dictionary<long, CancellationTokenSource> _usersTokenSources = new();
-
-    // класс для обработки обратных вызовов
     private readonly CallbackHandler _callbackHandler;
 
 
@@ -34,7 +33,7 @@ public class CurrencyBot
     }
 
     /// <summary>
-    /// Метод создает команды бота
+    /// Метод создает команды, которые бот будет обрабатывать
     /// </summary>
     public void CreateCommands()
     {
@@ -43,7 +42,7 @@ public class CurrencyBot
         _commandsMap.Add(CustomBotCommands.SHOW_CURRENCIES, new ShowCurrencyCommand(this));
         _commandsMap.Add(CustomBotCommands.TRACK, new TrackCommand(_telegramBotClient));
 
-        // создаем список и описание команд бота
+        // создаем список и описание меню команд бота 
         _telegramBotClient.SetMyCommandsAsync(new List<BotCommand>()
         {
             new()
@@ -69,7 +68,6 @@ public class CurrencyBot
     /// </summary>
     public void StartReceivingAsync()
     {
-        // Создаем новый токен отменты
         var cancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = cancellationTokenSource.Token;
 
@@ -88,8 +86,10 @@ public class CurrencyBot
     }
 
     /// <summary>
-    /// Метод показывает инлайн кнопки выбора валюты
+    /// Метод отправляет сообщение с инлайн кнопкам для выбора валюты и вызывает коллбэк нажатия на кнопку
+    /// Например пользователь нажал на кнопку BTC, вызывается коллбэк Select|BTC
     /// </summary>
+    /// <param name="message"> Сообщение от пользователя </param>
     public async Task ShowCurrencySelectionAsync(Message message, CancellationToken cancellationToken)
     {
         var chatId = message.Chat.Id;
@@ -120,28 +120,28 @@ public class CurrencyBot
             }
         });
 
-        // Отправляем сообщение с преложением выбрать валюты и инлайн кнопки для выбора
+        // Отправляем сообщение с инлайн кнопками для выбора валюты
         await _telegramBotClient.SendTextMessageAsync(chatId: chatId,
             text: "Выберите валюту:",
             replyMarkup: inlineKeyboard, cancellationToken: cancellationToken);
     }
 
     /// <summary>
-    /// Метод добавляет выбранную валюту в словарь.
+    /// Метод для добавления выбранной валюты для отслеживания в словарь
     /// </summary>
-    public void AddSelectedUserCurrency(long chatId, string currencyCode)
+    /// <param name="currencyCode"> Код валюты </param>
+    public void AddCurrencyForTrack(long chatId, string currencyCode)
     {
-        if (!_usersCurrentCurrency.ContainsKey(chatId))
+        if (!_usersTrackCurrency.ContainsKey(chatId))
         {
-            _usersCurrentCurrency.Add(chatId, currencyCode);
+            _usersTrackCurrency.Add(chatId, currencyCode);
         }
 
-        //Если ключ уже есть в словаре, выбранная валюта заменяется.
-        _usersCurrentCurrency[chatId] = currencyCode;
+        _usersTrackCurrency[chatId] = currencyCode;
     }
 
     /// <summary>
-    /// Метод возвращает tokenSource для отмены отслеживаемой валюты.
+    /// Метод возвращает tokenSource из словаря, для отмены отслеживания выбранной валюты.
     /// </summary>
     public CancellationTokenSource GetTokenSource(long chatId)
     {
@@ -151,9 +151,10 @@ public class CurrencyBot
     /// <summary>
     /// Метод удаляет сообщение пользователя
     /// </summary>
+    /// <param name="messageId">Индетификатор сообщения, которое надо удалить </param>
     public async Task DeleteMessage(long chatId, int messageId, CancellationToken cancellationToken)
     {
-        // Используем try-catch в случае, если пользователь сам удалил сообщение, быстрее бота.
+        // Используем try-catch в случае, если пользователь сам удалил сообщение, раньше бота.
         try
         {
             await _telegramBotClient.DeleteMessageAsync(chatId, messageId, cancellationToken);
@@ -169,8 +170,10 @@ public class CurrencyBot
     }
 
     /// <summary>
-    ///  Метод обрабатывает обновления от пользователя.
+    /// Метод обработывает события проиходящие с ботом.
+    /// Например: пользователь написал боту или нажал инлайн кнопку
     /// </summary>
+    /// <param name="update"> Информация о произошедшем событии </param>
     private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update,
         CancellationToken cancellationToken)
     {
@@ -188,16 +191,18 @@ public class CurrencyBot
     }
 
     /// <summary>
-    ///  Метод обрабатывает обновления типа Meessage
+    /// Метод обрабатывает события типа сообщение.
+    /// Которое включает в себя текст, картинки, видео, стикеры.
     /// </summary>
+    /// <param name="update"> Информация о произошедшем событии </param>
     private async Task HandleCommandMessageAsync(Update update, CancellationToken cancellationToken)
     {
         var message = update.Message;
         var chatId = message.Chat.Id;
-        var text = message.Text;
+        var messageText = message.Text;
 
-        // Проверяем, что прислал пользователь, если не текст удлаем сообщение.
-        if (text == null)
+        // Проверяем, что пользователь присал текстовое сообщение
+        if (messageText == null)
         {
             await DeleteMessage(chatId, message.MessageId, cancellationToken);
             await _telegramBotClient.SendTextMessageAsync(chatId: chatId,
@@ -205,34 +210,34 @@ public class CurrencyBot
             return;
         }
 
-        // Проверяем, прислал ли пользователь команду, если да вызываем метод обработки команды
-        if (_commandsMap.ContainsKey(text))
+        // Проверяем, прислал ли пользователь команду из меню, если да вызываем метод обработки команды
+        if (_commandsMap.ContainsKey(messageText))
         {
-            await _commandsMap[text].HandleCommandAsync(message, cancellationToken);
+            await _commandsMap[messageText].HandleCommandAsync(message, cancellationToken);
             return;
         }
 
-        // Проверяем выбрал ли пользоваль код валюты
-        if (_usersCurrentCurrency.ContainsKey(chatId))
+        // Проверяем выбрал ли пользоваль код валюты для отслеживания
+        if (_usersTrackCurrency.ContainsKey(chatId))
         {
-            // Начинаем отслеживать цену валюты
-            await StartTrackPrice(chatId, text, cancellationToken);
+            await StartTrackPrice(chatId, messageText, cancellationToken);
             return;
         }
 
-        // Сообщение в случае необработнки никакой команды
-        await _telegramBotClient.SendTextMessageAsync(chatId, "Введите команду", cancellationToken: cancellationToken);
+        // Сообщение в случае, если пользователь написал не команду бота
+        await _telegramBotClient.SendTextMessageAsync(chatId, "Введите команду.", cancellationToken: cancellationToken);
     }
 
     /// <summary>
-    /// Метод начинает отслевижать цену валюты
+    /// Метод начинает отслевижать изменение цены валюты 
     /// </summary>
-    private async Task StartTrackPrice(long chatId, string text, CancellationToken cancellationToken)
+    /// <param name="messageText"> Цена валюты, которую пользователь хочет получить </param>
+    private async Task StartTrackPrice(long chatId, string messageText, CancellationToken cancellationToken)
     {
         // Используем блок try-catch для того, чтобы конвертировать желаемый курс валюты, введеный пользоваетелем.
         try
         {
-            var trackValue = Convert.ToDecimal(text);
+            var trackValue = Convert.ToDecimal(messageText);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // Добавляемый новй токен отмены, чтобы остановить отслеживание
@@ -252,12 +257,12 @@ public class CurrencyBot
 
             // Направляем сообщение с инлайн кнопкой
             await _telegramBotClient.SendTextMessageAsync(chatId,
-                $"Начато отслеживание {_usersCurrentCurrency[chatId]} с порогом {trackValue}",
+                $"Начато отслеживание {_usersTrackCurrency[chatId]} с порогом {trackValue}",
                 replyMarkup: inlineKeyboard,
                 cancellationToken: cancellationToken);
         }
 
-        // Ловим ошибку на случай если пользователь введет не число, а текст.
+        // Ловим ошибку конвертации формата, на случай если пользователь введет не число, а текст.
         catch (FormatException exception)
         {
             await _telegramBotClient.SendTextMessageAsync(chatId, "Введите число.",
@@ -267,28 +272,29 @@ public class CurrencyBot
     }
 
     /// <summary>
-    /// Метод добавляет tokenSource в словарь
+    /// Метод добавляет в словарь, созданный tokenSource для остановки отслеживания цены валюты 
     /// </summary>
     private void AddUsersTokenSources(long chatId, CancellationTokenSource cancellationTokenSource)
     {
-        // Проверяем содержит ли словарь ключ - chatdId, если не добавляем
         if (!_usersTokenSources.ContainsKey(chatId))
         {
             _usersTokenSources.Add(chatId, cancellationTokenSource);
             return;
         }
-        
+
         _usersTokenSources[chatId] = cancellationTokenSource;
     }
-    
+
     /// <summary>
-    /// Метод отслеживает изменение цены валюты
+    /// Метод отслеживает изменение цены валюты с интервалом по таймеру.
+    /// Например, каждые 20 секунд, происходит запрос цены выбранной валюты.
     /// </summary>
+    /// <param name="trackValue"> Желаемая цена валюты </param>
     private void TrackPrice(long chatId, decimal trackValue)
     {
-        // Проверяем желаемая валюта больше или меньше показанной пользователю
+        // Проверяем желаемая валюта больше или меньше отпрваленной пользователю ранее
         var isDesiredPriceHigher = trackValue > _callbackHandler.GetPreviousPrice(chatId);
-        // создаем токен отменты 
+        // создаем токен отменты для текущей валюты
         var cancellationToken = _usersTokenSources[chatId].Token;
 
         // создаем объект класса Timer, который будет запускать проверку курса с заданным интервалом
@@ -297,42 +303,46 @@ public class CurrencyBot
             // Запускаем задачу, которая проверяет цену валюты
             Task.Run(async () =>
             {
-                var currencyCode = _usersCurrentCurrency[chatId];
-                
+                var currencyCode = _usersTrackCurrency[chatId];
+
                 // Если токен не отменен, продолжаем
                 if (!cancellationToken.IsCancellationRequested)
                 {
-                    // Получаем цену валюты
                     var price = await CoinMarket.GetPriceAsync(currencyCode);
-                    // Для проверки работоспособности таймера, отправим в косоль цену валюты
-                    Console.WriteLine(price);
 
                     // Если цена достигла желаемой выводим сообщение и останавливаем таймер
                     if (isDesiredPriceHigher && price >= trackValue)
                     {
-                        await _telegramBotClient.SendTextMessageAsync(chatId,
-                            $"Цена {currencyCode} = {price}.\n Отслеживание остановлено.",
-                            cancellationToken: cancellationToken);
-                        _usersTokenSources[chatId].Cancel();
+                        await StopTrack(chatId, currencyCode, price, cancellationToken);
                     }
 
                     // Если цена достигла желаемой выводим сообщение и останавливаем таймер
                     if (!isDesiredPriceHigher && price <= trackValue)
                     {
-                        await _telegramBotClient.SendTextMessageAsync(chatId,
-                            $"Цена {currencyCode} = {price}.\n Отслеживание остановлено.",
-                            cancellationToken: cancellationToken);
-                        _usersTokenSources[chatId].Cancel();
+                        await StopTrack(chatId, currencyCode, price, cancellationToken);
                     }
                 }
             }, cancellationToken);
         }, null, 0, INTERVAL);
     }
 
+    /// <summary>
+    /// Метод останавливет остлеживание изменения цены валюты, при достижении нужной цены
+    /// </summary>
+    /// <param name="currencyCode"> Код валюты </param>
+    /// <param name="price"> Цена валюты </param>
+    private async Task StopTrack(long chatId, string currencyCode, decimal price, CancellationToken cancellationToken)
+    {
+        await _telegramBotClient.SendTextMessageAsync(chatId,
+            $"Цена {currencyCode} = {price}.\n Отслеживание остановлено.",
+            cancellationToken: cancellationToken);
+        _usersTokenSources[chatId].Cancel();
+    }
 
     /// <summary>
-    /// Метод обработки ошибок получения обновлений
+    /// Метод обрабатывает ошибки бота во время отслеживания сообщеий от пользователя 
     /// </summary>
+    /// <param name="exception"> Тип ошибки </param>
     private Task HandleError(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
     {
         // Конвертируем ошибки в формат JSON и выводим в консоль
