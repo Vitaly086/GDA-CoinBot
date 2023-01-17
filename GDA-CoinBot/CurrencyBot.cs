@@ -27,7 +27,7 @@ public class CurrencyBot
     public void CreateCommands()
     {
         _commandsMap.Add(CustomBotCommands.START, new StartCommand(this));
-        _commandsMap.Add(CustomBotCommands.SHOW_CURRENCY, new ShowCurrencyCommand(_telegramBotClient));
+        _commandsMap.Add(CustomBotCommands.SHOW_CURRENCIES, new ShowCurrencyCommand(_telegramBotClient));
         _commandsMap.Add(CustomBotCommands.TRACK, new TrackCommand(_telegramBotClient));
 
         _telegramBotClient.SetMyCommandsAsync(new List<BotCommand>()
@@ -39,7 +39,7 @@ public class CurrencyBot
             },
             new()
             {
-                Command = CustomBotCommands.SHOW_CURRENCY,
+                Command = CustomBotCommands.SHOW_CURRENCIES,
                 Description = "Вывод сообщения с выбором 1 из 4 валют, для получения ее цены в данный момент"
             },
             new()
