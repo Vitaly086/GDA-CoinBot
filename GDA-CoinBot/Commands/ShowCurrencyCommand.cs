@@ -1,43 +1,23 @@
-using Telegram.Bot;
 using Telegram.Bot.Types;
-using Telegram.Bot.Types.ReplyMarkups;
 
 namespace GDA_CoinBot;
 
+/// <summary>
+/// Класс команды вывода валюты пользователю
+/// </summary>
 public class ShowCurrencyCommand : Command
 {
-    private readonly TelegramBotClient _botClient;
-    public ShowCurrencyCommand(TelegramBotClient botClient)
+    private readonly CurrencyBot _currencyBot;
+    public ShowCurrencyCommand(CurrencyBot currencyBot)
     {
-        _botClient = botClient;
+        _currencyBot = currencyBot;
     }
     
+    /// <summary>
+    /// Переопределенный метод отправляет пользователю сообщение выбора валют с инлайн кнопками
+    /// </summary>
     public override async Task HandleCommandAsync(Message message, CancellationToken cancellationToken)
     {
-        var chatId = message.Chat.Id;
-        
-        var inlineKeyboard = new InlineKeyboardMarkup(new[]
-        {
-            // Row 1
-            new[]
-            {
-                InlineKeyboardButton.WithCallbackData("Bitcoin",
-                    $"{CustomCallbackData.SELECT}|{CustomCallbackData.BTC}"),
-                InlineKeyboardButton.WithCallbackData("Ethereum",
-                    $"{CustomCallbackData.SELECT}|{CustomCallbackData.ETH}"),
-            },
-            // Row 2
-            new[]
-            {
-                InlineKeyboardButton.WithCallbackData("BNB",
-                    $"{CustomCallbackData.SELECT}|{CustomCallbackData.BNB}"),
-                InlineKeyboardButton.WithCallbackData("DogeCoin",
-                    $"{CustomCallbackData.SELECT}|{CustomCallbackData.DOGE}"),
-            }
-        });
-
-        await _botClient.SendTextMessageAsync(chatId: chatId,
-            text: "Выберите валюту:",
-            replyMarkup: inlineKeyboard, cancellationToken: cancellationToken);
+        await _currencyBot.ShowCurrencySelectionAsync(message, cancellationToken);
     }
 }

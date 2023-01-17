@@ -4,6 +4,9 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace GDA_CoinBot;
 
+/// <summary>
+/// Класс команды отслеживать
+/// </summary>
 public class TrackCommand : Command
 {
     private readonly TelegramBotClient _botClient;
@@ -13,29 +16,33 @@ public class TrackCommand : Command
         _botClient = botClient;
     }
 
+    // Переопределенный метод отправляет пользователю сообщение с выбором валюты и инлайн кнопка
+    // С коллбэком действия Track и код валюты
     public override async Task HandleCommandAsync(Message message, CancellationToken cancellationToken)
     {
         var chatId = message.Chat.Id;
+        // Создаем инлайн кнопки
         var inlineKeyboard = new InlineKeyboardMarkup(new[]
         {
-            // Row 1
+            // Строка 1
             new[]
             {
                 InlineKeyboardButton.WithCallbackData("Bitcoin",
-                    $"{CustomCallbackData.TRACK}|{CustomCallbackData.BTC}"),
+                    $"{CustomCallbackData.START_TRACK}|{CustomCallbackData.BTC}"),
                 InlineKeyboardButton.WithCallbackData("Ethereum",
-                    $"{CustomCallbackData.TRACK}|{CustomCallbackData.ETH}"),
+                    $"{CustomCallbackData.START_TRACK}|{CustomCallbackData.ETH}"),
             },
-            // Row 2
+            // Строка 2
             new[]
             {
                 InlineKeyboardButton.WithCallbackData("BNB",
-                    $"{CustomCallbackData.TRACK}|{CustomCallbackData.BNB}"),
+                    $"{CustomCallbackData.START_TRACK}|{CustomCallbackData.BNB}"),
                 InlineKeyboardButton.WithCallbackData("DogeCoin",
-                    $"{CustomCallbackData.TRACK}|{CustomCallbackData.DOGE}"),
+                    $"{CustomCallbackData.START_TRACK}|{CustomCallbackData.DOGE}"),
             }
         });
-
+        
+        // Отправляем сообщение с инлайн кнопками
         await _botClient.SendTextMessageAsync(chatId, text: "Выберите валютую",
             replyMarkup: inlineKeyboard, cancellationToken: cancellationToken);
     }
