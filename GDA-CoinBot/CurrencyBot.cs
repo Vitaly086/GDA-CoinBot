@@ -66,7 +66,7 @@ public class CurrencyBot
     /// <summary>
     /// Метод начинает отслеживание сообщений от пользователя
     /// </summary>
-    public void StartReceivingAsync()
+    public void StartReceiving()
     {
         var cancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = cancellationTokenSource.Token;

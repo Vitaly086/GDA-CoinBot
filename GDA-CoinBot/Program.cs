@@ -5,7 +5,7 @@ class Program
     {
         var currencyBot = new CurrencyBot(ApiConstants.BOT_API);
         currencyBot.CreateCommands();
-        currencyBot.StartReceivingAsync();
+        currencyBot.StartReceiving();
         // Ожидаем нажатия клавиши до завершения программы
         Console.ReadKey();
     }
