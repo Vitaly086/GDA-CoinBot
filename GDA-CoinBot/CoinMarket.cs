@@ -7,12 +7,12 @@ public static class CoinMarket
 {
     private static readonly string API_KEY = ApiConstants.COIN_MARKET_API;
 
-    
+
     /// <summary>
     /// Метод для получения прайса выбранной валюты
     /// </summary>
     /// <param name="currencyCode"> Код выбранной валюты </param>
-    /// <returns></returns>
+    /// <returns> Цену валюты </returns>
     public static async Task<decimal> GetPriceAsync(string currencyCode)
     {
         // Создаем конструкцию using, чтобы по окнчанию метода, освободить память
@@ -30,7 +30,7 @@ public static class CoinMarket
 
             // Распарсим запрос в формат JSON
             var jsonResponse = JsonDocument.Parse(responseString);
-            
+
             // С помощью метода GetProperty получим свойство цены валюты 
             // Перведем ее в формат decimal
             var price = jsonResponse.RootElement

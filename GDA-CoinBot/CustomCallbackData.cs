@@ -11,8 +11,8 @@ public static class CustomCallbackData
     public const string BNB = "BNB";
     public const string DOGE = "DOGE";
     
-    // Коллбэк нажатия на инлайн кнопку для выбора кода вылюты
-    public const string SELECT_CURRENCY = "SelectCurrency";
+    // Коллбэк нажатия на инлайн кнопку в ответ на стартовое сообщение
+    public const string START_CHOICE = "StartChoice";
     // Коллбэк нажатия на инлайн кнопку для вызова команды для смены валюты
     public const string CHANGE_CURRENCY = "ChangeCurrency";
 }

@@ -1,5 +1,4 @@
-﻿
-/// <summary>
+﻿/// <summary>
 /// Класс содержит константы команд из меню бота
 /// </summary>
 public static class CustomBotCommands
